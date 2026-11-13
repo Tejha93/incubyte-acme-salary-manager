@@ -2,6 +2,8 @@
 
 An HR workspace for managing annual base salaries and understanding pay across ACME's global roster. It uses Java, Spring Boot, Angular, Angular CDK, and a relational H2 database.
 
+The Angular app lives in `frontend/` and the Spring Boot app lives in `backend/`. Both are part of this repository. Maven packages the compiled Angular app into the Spring Boot JAR.
+
 ## Run locally
 
 Prerequisites are JDK 21, Maven 3.9, and Node 22. The backend compiles to Java 17 bytecode.
@@ -11,8 +13,8 @@ cd frontend
 npm ci
 npm run build
 cd ..
-mvn verify
-java -jar target/salary-manager-1.0.0.jar --spring.profiles.active=demo
+mvn -f backend/pom.xml verify
+java -jar backend/target/salary-manager-1.0.0.jar --spring.profiles.active=demo
 ```
 
 Open [http://127.0.0.1:8080](http://127.0.0.1:8080). The loopback demo account is **hr** with password **acme-local-demo**. On a fresh database, the demo profile seeds 10,000 synthetic employees. Stop the server and point `DATABASE_URL` to a new H2 file to start another clean demo.
@@ -20,7 +22,7 @@ Open [http://127.0.0.1:8080](http://127.0.0.1:8080). The loopback demo account i
 To run the seed independently, use the built JAR and a fresh database URL if needed.
 
 ```sh
-java -jar target/salary-manager-1.0.0.jar --spring.profiles.active=demo --spring.main.web-application-type=none
+java -jar backend/target/salary-manager-1.0.0.jar --spring.profiles.active=demo --spring.main.web-application-type=none
 ```
 
 ## Verify the HR workflow
@@ -32,7 +34,7 @@ java -jar target/salary-manager-1.0.0.jar --spring.profiles.active=demo --spring
 3. Open **Pay insights**. Filter by **India** and **Engineering**. Confirm the INR group and its matching headcount, median, average, lowest and highest amounts.
 4. Refresh the page to confirm session continuity. Sign out to end access.
 
-Run `mvn test` for the deterministic backend suite. It checks validation, exact money and rounding, all 10,000 seed rows, filtered pagination, insights, stale writes, rollback, and access controls.
+Run `mvn -f backend/pom.xml test` for the deterministic backend suite. It checks validation, exact money and rounding, all 10,000 seed rows, filtered pagination, insights, stale writes, rollback, and access controls.
 
 ## Deploy
 
@@ -44,4 +46,3 @@ The included [Render Blueprint](render.yaml) provisions a single Docker web serv
 
 - [One-page requirements](docs/requirements.md)
 - [Design, performance, and AI-assisted development](docs/design.md)
-

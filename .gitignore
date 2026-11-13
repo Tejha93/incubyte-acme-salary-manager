@@ -1,5 +1,7 @@
 /target/
+/backend/target/
 /data/
+/backend/data/
 /frontend/node_modules/
 /frontend/dist/
 /frontend/.angular/

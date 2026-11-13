@@ -17,5 +17,5 @@ jobs:
           cache: maven
       - run: npm ci && npm run build
         working-directory: frontend
-      - run: mvn -B -ntp verify
+      - run: mvn -B -ntp -f backend/pom.xml verify
       - run: docker build -t acme-salary-manager:ci .
