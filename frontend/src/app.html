@@ -1,0 +1,371 @@
+@if (!ready) {
+<main class="center" aria-live="polite">Loading compensation workspace…</main>
+} @else if (!username) {
+<main class="login-shell">
+  <section class="login-intro">
+    <div class="brand"><span class="mark">A</span><strong>ACME</strong></div>
+    <div>
+      <p class="eyebrow">PEOPLE OPERATIONS</p>
+      <h1>Compensation<br />workspace.</h1>
+      <p>
+        Maintain employee salaries and understand how ACME pays people across
+        locations.
+      </p>
+    </div>
+    <span class="muted-light">ACME People Operations</span>
+  </section>
+  <section class="login-panel">
+    <form (ngSubmit)="signIn()">
+      <h2>Sign in</h2>
+      <p class="muted">Use your HR account to access compensation records.</p>
+      <label for="username">Username</label>
+      <input
+        id="username"
+        name="username"
+        [(ngModel)]="loginName"
+        autocomplete="username"
+        required
+      />
+      <label for="password">Password</label>
+      <input
+        id="password"
+        name="password"
+        [(ngModel)]="password"
+        type="password"
+        autocomplete="current-password"
+        required
+      />
+      @if (loginError) {
+      <p class="alert-error" role="alert">{{loginError}}</p>
+      }
+      <button
+        class="primary"
+        type="submit"
+        [disabled]="signingIn || !loginName || !password"
+      >
+        {{signingIn ? 'Signing in…' : 'Sign in'}}
+      </button>
+    </form>
+  </section>
+</main>
+} @else {
+<div class="layout">
+  <aside class="sidebar">
+    <div class="brand">
+      <span class="mark">A</span>
+      <div><strong>ACME</strong><small>People Operations</small></div>
+    </div>
+    <nav aria-label="Compensation">
+      <button
+        type="button"
+        [class.active]="view === 'directory'"
+        [attr.aria-current]="view === 'directory' ? 'page' : null"
+        (click)="changeView('directory')"
+      >
+        <span aria-hidden="true">▤</span> Employee directory
+      </button>
+      <button
+        type="button"
+        [class.active]="view === 'insights'"
+        [attr.aria-current]="view === 'insights' ? 'page' : null"
+        (click)="changeView('insights')"
+      >
+        <span aria-hidden="true">▥</span> Pay insights
+      </button>
+    </nav>
+    <div class="account">
+      <span class="account-mark">{{username.slice(0, 2).toUpperCase()}}</span>
+      <div><strong>{{username}}</strong><small>HR manager</small></div>
+      <button type="button" (click)="signOut()">Sign out</button>
+    </div>
+  </aside>
+  <main class="workspace">
+    <header class="workspace-header">
+      <p class="eyebrow">COMPENSATION</p>
+      <h1>{{view === 'directory' ? 'Employee directory' : 'Pay insights'}}</h1>
+      <p class="muted">
+        {{view === 'directory' ? 'Find employees, review base pay, and record
+        salary changes.' : 'Explore annual base pay by country, department, and
+        currency.'}}
+      </p>
+    </header>
+    <section class="filter-bar" aria-label="Filters">
+      @if (view === 'directory') {
+      <div class="search-field">
+        <label for="search">Find an employee</label
+        ><input
+          id="search"
+          type="search"
+          maxlength="100"
+          placeholder="Search by name or employee ID"
+          [ngModel]="search"
+          (ngModelChange)="searchChanged($event)"
+        />
+      </div>
+      }
+      <div>
+        <label for="country">Country</label
+        ><select
+          id="country"
+          [(ngModel)]="country"
+          (ngModelChange)="filtersChanged()"
+        >
+          <option value="">All countries</option>
+          @for (item of options.countries; track item) {
+          <option [value]="item">{{item}}</option>
+          }
+        </select>
+      </div>
+      <div>
+        <label for="department">Department</label
+        ><select
+          id="department"
+          [(ngModel)]="department"
+          (ngModelChange)="filtersChanged()"
+        >
+          <option value="">All departments</option>
+          @for (item of options.departments; track item) {
+          <option [value]="item">{{item}}</option>
+          }
+        </select>
+      </div>
+    </section>
+    @if (error) {
+    <div class="alert-error" role="alert">
+      {{error}} <button type="button" (click)="refresh()">Retry</button>
+    </div>
+    } @if (loading) {
+    <p class="loading" role="status">Loading compensation data…</p>
+    } @if (view === 'directory' && directory && !error && !loading) {
+    <section class="panel">
+      <header class="panel-heading">
+        <h2>Employees</h2>
+        <span>{{directory.total | number}} matching</span>
+      </header>
+      @if (directory.employees.length) {
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Employee</th>
+              <th>Country</th>
+              <th>Department</th>
+              <th class="number">Annual base salary</th>
+              <th><span class="visually-hidden">Actions</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (employee of directory.employees; track employee.id) {
+            <tr>
+              <td>
+                <strong>{{employee.name}}</strong><small>{{employee.id}}</small>
+              </td>
+              <td>{{employee.country}}</td>
+              <td>{{employee.department}}</td>
+              <td class="number money">
+                {{money(employee.salaryMinor, employee.currency)}}
+              </td>
+              <td class="number">
+                <button
+                  type="button"
+                  class="quiet"
+                  [attr.aria-label]="'View salary for ' + employee.name + ' ' + employee.id"
+                  (click)="openDetails(employee.id)"
+                >
+                  View <span aria-hidden="true">↗</span>
+                </button>
+              </td>
+            </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      <footer class="paging">
+        <span
+          >Showing {{directory.page * pageSize + 1 | number}}–{{directory.page *
+          pageSize + directory.employees.length | number}} of {{directory.total
+          | number}}</span
+        >
+        <div>
+          <button
+            type="button"
+            [disabled]="directory.page === 0"
+            (click)="goTo(directory.page - 1)"
+          >
+            Previous
+          </button>
+          <button
+            type="button"
+            [disabled]="(directory.page + 1) * pageSize >= directory.total"
+            (click)="goTo(directory.page + 1)"
+          >
+            Next
+          </button>
+        </div>
+      </footer>
+      } @else {
+      <p class="empty">No employees match these filters.</p>
+      }
+    </section>
+    } @if (view === 'insights' && !error && !loading) {
+    <div class="metric-row">
+      <section class="panel metric">
+        <h2>Matching employees</h2>
+        <strong>{{insightHeadcount | number}}</strong>
+      </section>
+      <section class="panel metric">
+        <h2>Pay currencies</h2>
+        <strong>{{summaries.length}}</strong>
+      </section>
+    </div>
+    <section class="panel">
+      <header class="panel-heading">
+        <div>
+          <h2>Annual base pay by currency</h2>
+          <p class="muted">Amounts are shown in each group’s pay currency.</p>
+        </div>
+      </header>
+      @if (summaries.length) {
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Currency</th>
+              <th class="number">Employees</th>
+              <th class="number">Median</th>
+              <th class="number">Average</th>
+              <th class="number">Lowest</th>
+              <th class="number">Highest</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (summary of summaries; track summary.currency) {
+            <tr>
+              <td><strong>{{summary.currency}}</strong></td>
+              <td class="number">{{summary.count | number}}</td>
+              <td class="number money">
+                {{money(summary.medianMinor, summary.currency)}}
+              </td>
+              <td class="number">
+                {{money(summary.averageMinor, summary.currency)}}
+              </td>
+              <td class="number">
+                {{money(summary.minimumMinor, summary.currency)}}
+              </td>
+              <td class="number">
+                {{money(summary.maximumMinor, summary.currency)}}
+              </td>
+            </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      } @else {
+      <p class="empty">No salary data matches these filters.</p>
+      }
+    </section>
+    } @if (!selected && detailLoading) {
+    <p class="loading" role="status">Loading employee record…</p>
+    } @if (!selected && detailError) {
+    <p class="alert-error" role="alert">{{detailError}}</p>
+    }
+  </main>
+</div>
+@if (selected; as record) {
+<div class="drawer-backdrop" (click)="closeDetails()" aria-hidden="true"></div>
+<section
+  class="drawer"
+  role="dialog"
+  aria-modal="true"
+  cdkTrapFocus
+  [cdkTrapFocusAutoCapture]="true"
+  aria-labelledby="employee-title"
+  (keydown.escape)="closeDetails()"
+>
+  <header>
+    <div>
+      <p class="eyebrow">{{record.employee.id}}</p>
+      <h2 id="employee-title">{{record.employee.name}}</h2>
+      <p class="muted">
+        {{record.employee.department}} · {{record.employee.country}}
+      </p>
+    </div>
+    <button
+      type="button"
+      class="close-button"
+      aria-label="Close employee details"
+      (click)="closeDetails()"
+    >
+      ×
+    </button>
+  </header>
+  <div class="current-pay">
+    <span>Current annual base salary</span
+    ><strong
+      >{{money(record.employee.salaryMinor, record.employee.currency)}}</strong
+    >
+  </div>
+  <form (ngSubmit)="save(record.employee)">
+    <h3>Update salary</h3>
+    <label for="annual-amount"
+      >New annual salary ({{record.employee.currency}})</label
+    >
+    <input
+      id="annual-amount"
+      cdkFocusInitial
+      name="amount"
+      [(ngModel)]="amount"
+      inputmode="decimal"
+      maxlength="16"
+      required
+    />
+    <label for="reason">Reason for change</label>
+    <textarea
+      id="reason"
+      name="reason"
+      [(ngModel)]="reason"
+      maxlength="240"
+      rows="3"
+      required
+    ></textarea>
+    @if (detailError) {
+    <p class="alert-error" role="alert">{{detailError}}</p>
+    } @if (notice) {
+    <p class="alert-success" role="status">{{notice}}</p>
+    } @if (conflict) {
+    <button
+      type="button"
+      (click)="openDetails(record.employee.id)"
+      [disabled]="detailLoading"
+    >
+      Reload latest record
+    </button>
+    }
+    <button
+      type="submit"
+      class="primary"
+      [disabled]="saving || conflict || detailLoading || !amount.trim() || !reason.trim()"
+    >
+      {{saving ? 'Saving…' : 'Save salary'}}
+    </button>
+  </form>
+  <section class="history">
+    <h3>Salary history</h3>
+    @for (change of record.history; track change.version) {
+    <article>
+      <strong
+        >{{money(change.previousMinor, record.employee.currency)}} →
+        {{money(change.salaryMinor, record.employee.currency)}}</strong
+      >
+      <p>{{change.reason}}</p>
+      <small
+        >{{change.changedAt | date:'medium':'UTC'}} UTC ·
+        {{change.changedBy}}</small
+      >
+    </article>
+    } @empty {
+    <p class="muted">No salary changes recorded.</p>
+    }
+  </section>
+</section>
+} }
