@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: acme-salary-manager
+    runtime: docker
+    plan: starter
+    healthCheckPath: /api/health
+    disk:
+      name: acme-salaries
+      mountPath: /var/data
+      sizeGB: 1
+    envVars:
+      - key: HR_USERNAME
+        value: hr
+      - key: HR_PASSWORD
+        sync: false
+      - key: SEED_DEMO_DATA
+        value: "true"
+      - key: SESSION_COOKIE_SECURE
+        value: "true"
